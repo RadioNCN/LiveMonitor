@@ -1,0 +1,16 @@
+[package]
+name = "LiveMonitor"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { version = "1.43.0", features = ["full"] }
+eframe = "0.31.0"
+egui-plotter = "0.4.0"
+plotters = "0.3.0"
+rayon = "1.10.0"
+
+[profile.release]
+opt-level = 3  # Maximum optimization level
+lto = true
+overflow-checks = false
