@@ -1,12 +1,12 @@
 mod server;
 mod plt_window;
+mod guide;
 
 use tokio::{self, time};
 use std::collections::HashMap;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{mpsc};
 use rayon::prelude::*;
 use eframe::egui::{self, SidePanel, CentralPanel, Visuals, Window, Button};
-use egui_plotter::EguiBackend;
 use plotters::prelude::*;
 
 #[tokio::main]
@@ -24,7 +24,9 @@ async fn main() {
 struct Monitor {
     data_rx: mpsc::Receiver<(String,(f64,f64))>,
     data_db: HashMap<String,Vec<(f64,f64)>>,
-    keys_for_plots: HashMap<String, bool>
+    plotpara: HashMap<String,(f64, f64, f64, f64)>,
+    keys_for_plots: HashMap<String, bool>,
+    enGuide: bool
 }
 
 impl Monitor {
@@ -41,7 +43,10 @@ impl Monitor {
         let (tx, mut rx) = mpsc::channel(100);
         tokio::spawn(server::ConnectionManager(tx));
 
-        Self{data_rx: rx, data_db: HashMap::new(), keys_for_plots: HashMap::new()}
+        Self{data_rx: rx,
+            data_db: HashMap::new(), keys_for_plots: HashMap::new(),
+            plotpara: HashMap::new(),
+            enGuide: false}
     }
 }
 
@@ -58,12 +63,14 @@ impl eframe::App for Monitor {
                             }
                         }
                     }else{
-                        self.data_db.insert(id, vec![data]);
+                        self.data_db.insert(id.clone(), vec![data]);
+                        self.plotpara.insert(id, (0.,0.,0.,0.));
                     }
                 }
                 Err(e) => {}
             }
         }
+
         CentralPanel::default().show(ctx, |ui| {
             for key in self.keys_for_plots.keys(){
                 plt_window::new(ctx, key, self.data_db.clone())
@@ -72,8 +79,13 @@ impl eframe::App for Monitor {
         SidePanel::left("Data Channels")
             .frame(egui::Frame::new().fill(egui::Color32::from_rgb(0,100,180)))
             .show(ctx, |ui| {
-                // ui.set_height(ui.available_height());
-                // ui.set_width(ui.available_width());
+                if ui.add(Button::new("Guide")).clicked(){
+                    self.enGuide ^= true;
+                }
+                if self.enGuide {
+                    guide::new(ctx)
+                }
+
                 for key in self.data_db.keys(){
                     if ui.add(Button::new(key)).clicked(){
                         if self.keys_for_plots.contains_key(key){
@@ -84,6 +96,7 @@ impl eframe::App for Monitor {
                     }
                 };
             });
+
         ctx.request_repaint_after(time::Duration::from_millis(30));
     }
 }
