@@ -14,12 +14,12 @@ TCP_PORT = 7800
 
 sender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sender.connect((TCP_IP, TCP_PORT))
-MESSAGE = 'Sinus\\n'
-sender.send(bytes(MESSAGE, encoding='utf8'))
-time.sleep(1)
+FirstMessage = 'Sinus\\n'
+sender.send(bytes(FirstMessage, encoding='utf8'))
+time.sleep(0.01)
 
 t=0
-while True
+while True:
     MESSAGE = '{x}\\n{y}\\n'.format(x=t, y=np.sin(t))
     sender.send(bytes(MESSAGE, encoding='utf8'))
     time.sleep(.005)

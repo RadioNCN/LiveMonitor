@@ -24,7 +24,7 @@ async fn main() {
 struct Monitor {
     data_rx: mpsc::Receiver<(String,(f64,f64))>,
     data_db: HashMap<String,Vec<(f64,f64)>>,
-    plotpara: HashMap<String,(f64, f64, f64, f64)>,
+    plotpara: HashMap<String,plt_window::Plotpara>,
     keys_for_plots: HashMap<String, bool>,
     enGuide: bool
 }
@@ -64,7 +64,8 @@ impl eframe::App for Monitor {
                         }
                     }else{
                         self.data_db.insert(id.clone(), vec![data]);
-                        self.plotpara.insert(id, (0.,0.,0.,0.));
+                        self.plotpara.insert(id, plt_window::Plotpara{x_min:0., x_max:0., x_rescale:true,
+                        y_min:0., y_max:0., y_rescale:true});
                     }
                 }
                 Err(e) => {}
@@ -73,7 +74,7 @@ impl eframe::App for Monitor {
 
         CentralPanel::default().show(ctx, |ui| {
             for key in self.keys_for_plots.keys(){
-                plt_window::new(ctx, key, self.data_db.clone())
+                plt_window::new(ctx, key, &self.data_db, &mut self.plotpara)
             }
         });
         SidePanel::left("Data Channels")
