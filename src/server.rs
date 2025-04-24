@@ -7,7 +7,6 @@ use tokio::runtime::Runtime;
 
 pub(crate) async fn ConnectionManager(tx: mpsc::Sender<(String,(f64,f64))>){
     let server_address = "127.0.0.1:7800";
-    let data_max_len = 1000;
     let output = Arc::new(Mutex::new(tx));
 
     match TcpListener::bind(server_address).await {

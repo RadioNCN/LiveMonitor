@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 use eframe::egui;
-use eframe::egui::Window;
+use eframe::egui::{Button, DragValue, Window};
 use egui_plotter::EguiBackend;
 use plotters::prelude::*;
 
 pub(crate) struct Plotpara {
+    pub(crate) settings: bool,
     pub(crate) x_min:f64, pub(crate) x_max:f64,
     pub(crate) x_rescale: bool,
     pub(crate) y_min:f64, pub(crate) y_max:f64,
@@ -12,7 +13,7 @@ pub(crate) struct Plotpara {
 }
 
 pub(crate) fn new(ctx: &egui::Context, key: &String,
-                  data: &HashMap<String,Vec<(f64,f64)>>,
+                  data: &mut HashMap<String, Vec<(f64, f64)>>,
                   para: &mut HashMap<String, Plotpara>) {
 
     let (x_min, x_max) = data[key].iter()
@@ -45,9 +46,17 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
             ui.set_height(ui.available_height());
             ui.set_width(ui.available_width());
 
+            if let Some(parameters) =para.get_mut(key) {
+                if ui.add(Button::new("Settings")).clicked() {
+                    parameters.settings ^= true
+                }
+            }
+
             let root = EguiBackend::new(ui).into_drawing_area();
             let mut chart = ChartBuilder::on(&root)
-                .margin(5)
+                // .margin(50)
+                .margin_top(20)
+                .margin_left(10)
                 .x_label_area_size(30)
                 .y_label_area_size(30)
                 .build_cartesian_2d(para[key].x_min..para[key].x_max, para[key].y_min..para[key].y_max)
@@ -63,4 +72,46 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
                 })
             ).unwrap();
         });
+
+    if para[key].settings {
+        Window::new(key.to_string()+" | Settings")
+            .default_open(true)
+            .show(ctx, |ui| {
+                // ui.set_height(ui.available_height());
+                ui.set_width(ui.available_width());
+                if let Some(parameters) =para.get_mut(key) {
+                    ui.horizontal(|hui| {
+                        hui.vertical(|vui| {
+                            vui.checkbox(&mut parameters.x_rescale, "Rescale: X");
+                            vui.horizontal(|hui| {
+                                hui.label("X min:");
+                                hui.add(DragValue::new(&mut parameters.x_min));
+                                hui.label("X max:");
+                                hui.add(DragValue::new(&mut parameters.x_max));
+                            })
+                        });
+                        hui.vertical(|vui| {
+                            vui.checkbox(&mut parameters.y_rescale, "Rescale: Y");
+                            vui.horizontal(|hui| {
+                                hui.label("Y min:");
+                                hui.add(DragValue::new(&mut parameters.y_min));
+                                hui.label("Y max:");
+                                hui.add(DragValue::new(&mut parameters.y_max));
+                            })
+                        });
+                    });
+                    ui.horizontal(|vui| {
+                        if vui.add(Button::new("Empty data")).clicked() {
+                            if let Some(val) = data.get_mut(key) {
+                                val.clear()
+                            }
+                        }
+
+                    });
+                    if ui.add(Button::new("Exit Settings")).clicked() {
+                        parameters.settings = false
+                    }
+                }
+            });
+    }
 }

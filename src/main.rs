@@ -6,7 +6,7 @@ use tokio::{self, time};
 use std::collections::HashMap;
 use tokio::sync::{mpsc};
 use rayon::prelude::*;
-use eframe::egui::{self, SidePanel, CentralPanel, Visuals, Window, Button};
+use eframe::egui::{self, SidePanel, CentralPanel, Visuals, Window, Button, DragValue};
 use plotters::prelude::*;
 
 #[tokio::main]
@@ -24,6 +24,7 @@ async fn main() {
 struct Monitor {
     data_rx: mpsc::Receiver<(String,(f64,f64))>,
     data_db: HashMap<String,Vec<(f64,f64)>>,
+    data_max_len: usize,
     plotpara: HashMap<String,plt_window::Plotpara>,
     keys_for_plots: HashMap<String, bool>,
     enGuide: bool
@@ -40,11 +41,12 @@ impl Monitor {
 
         // Also enable light mode
         context.set_visuals(Visuals::light());
-        let (tx, mut rx) = mpsc::channel(100);
+        let (tx, mut rx) = mpsc::channel(10000);
         tokio::spawn(server::ConnectionManager(tx));
 
         Self{data_rx: rx,
             data_db: HashMap::new(), keys_for_plots: HashMap::new(),
+            data_max_len: 1000,
             plotpara: HashMap::new(),
             enGuide: false}
     }
@@ -58,14 +60,14 @@ impl eframe::App for Monitor {
                     if self.data_db.contains_key(&id){
                         if let Some(x) = self.data_db.get_mut(&id){
                             x.push(data);
-                            if x.len() > 1000 {
+                            while x.len() > self.data_max_len {
                                 x.remove(0);
                             }
                         }
                     }else{
                         self.data_db.insert(id.clone(), vec![data]);
                         self.plotpara.insert(id, plt_window::Plotpara{x_min:0., x_max:0., x_rescale:true,
-                        y_min:0., y_max:0., y_rescale:true});
+                        y_min:0., y_max:0., y_rescale:true, settings: false});
                     }
                 }
                 Err(e) => {}
@@ -74,7 +76,7 @@ impl eframe::App for Monitor {
 
         CentralPanel::default().show(ctx, |ui| {
             for key in self.keys_for_plots.keys(){
-                plt_window::new(ctx, key, &self.data_db, &mut self.plotpara)
+                plt_window::new(ctx, key, &mut self.data_db, &mut self.plotpara)
             }
         });
         SidePanel::left("Data Channels")
@@ -83,6 +85,7 @@ impl eframe::App for Monitor {
                 if ui.add(Button::new("Guide")).clicked(){
                     self.enGuide ^= true;
                 }
+                ui.add(DragValue::new(&mut self.data_max_len).speed(10));
                 if self.enGuide {
                     guide::new(ctx)
                 }
