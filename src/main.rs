@@ -1,3 +1,4 @@
+// #![windows_subsystem = "windows"]
 mod server;
 mod plt_window;
 mod guide;
@@ -6,7 +7,7 @@ use tokio::{self, time};
 use std::collections::HashMap;
 use tokio::sync::{mpsc};
 use rayon::prelude::*;
-use eframe::egui::{self, SidePanel, CentralPanel, Visuals, Window, Button, DragValue};
+use eframe::egui::{self, SidePanel, CentralPanel, TopBottomPanel, Visuals, Window, Button, DragValue};
 use plotters::prelude::*;
 
 #[tokio::main]
@@ -67,7 +68,7 @@ impl eframe::App for Monitor {
                     }else{
                         self.data_db.insert(id.clone(), vec![data]);
                         self.plotpara.insert(id, plt_window::Plotpara{x_min:0., x_max:0., x_rescale:true,
-                            y_min:0., y_max:0., y_rescale:true, settings: false,
+                            y_min:0., y_max:0., y_rescale:true, settings: false, legend: false,
                             addplots: [0,0,0,0], plot_mode: plt_window::PlotMode::Scatter});
                     }
                 }
@@ -75,7 +76,9 @@ impl eframe::App for Monitor {
             }
         }
 
-        CentralPanel::default().show(ctx, |ui| {
+        CentralPanel::default()
+            // .frame(egui::Frame::new().fill(egui::Color32::from_rgb(0,100,180)))
+            .show(ctx, |ui| {
             for key in self.keys_for_plots.keys(){
                 plt_window::new(ctx, key, &mut self.data_db, &mut self.plotpara)
             }
@@ -100,6 +103,15 @@ impl eframe::App for Monitor {
                         }
                     }
                 };
+
+            });
+        TopBottomPanel::bottom("AppInfo")
+            // .frame(egui::Frame::new().fill(egui::Color32::from_rgb(0,100,180)))
+            .show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(format!("Version: {}", env!("CARGO_PKG_VERSION")));
+                    ui.label(format!("TCP: {}", "127.0.0.1:7800"));
+                })
             });
 
         ctx.request_repaint_after(time::Duration::from_millis(30));

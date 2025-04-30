@@ -6,6 +6,7 @@ use plotters::prelude::*;
 
 pub(crate) struct Plotpara {
     pub(crate) settings: bool,
+    pub(crate) legend: bool,
     pub(crate) x_min:f64, pub(crate) x_max:f64,
     pub(crate) x_rescale: bool,
     pub(crate) y_min:f64, pub(crate) y_max:f64,
@@ -58,37 +59,67 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
             ui.set_width(ui.available_width());
 
             if let Some(parameters) =para.get_mut(key) {
-                if ui.add(Button::new("Settings")).clicked() {
-                    parameters.settings ^= true
-                }
-
-                let root = EguiBackend::new(ui).into_drawing_area();
-                let mut chart = ChartBuilder::on(&root)
-                    // .margin(50)
-                    .margin_top(20)
-                    .margin_left(10)
-                    .x_label_area_size(30)
-                    .y_label_area_size(30)
-                    .build_cartesian_2d(parameters.x_min..parameters.x_max, parameters.y_min..parameters.y_max)
-                    .unwrap();
-
-                chart.configure_mesh()
-                    .x_label_style(("sans-serif", 15).into_font().color(&BLACK))
-                    .y_label_style(("sans-serif", 15).into_font().color(&BLACK))
-                    .draw().unwrap();
-                chart.draw_series(
-                    data[key].iter().map(|&(x, y)| {
-                        Circle::new((x, y), 2, MandelbrotHSL.get_color(0. / (data.keys().len() as f64)).filled())
-                    })
-                ).unwrap();
-                for addplot_index in parameters.addplots{
-                    if data.contains_key(&other_keys[addplot_index]){
-                        chart.draw_series(
-                            data[&other_keys[addplot_index]].iter().map(|&(x, y)| {
-                                Circle::new((x, y), 2, MandelbrotHSL.get_color(addplot_index as f64 / (data.keys().len() as f64)).filled())
-                            })
-                        ).unwrap();
+                ui.horizontal(|hui| {
+                    if hui.add(Button::new("Settings")).clicked() {
+                        parameters.settings ^= true
                     }
+                    if hui.add(Button::new("Legend")).clicked() {
+                        parameters.legend ^= true
+                    }
+                });
+
+                if data[key].len()> 0 {
+                    let root = EguiBackend::new(ui).into_drawing_area();
+                    let mut chart = ChartBuilder::on(&root)
+                        // .margin(50)
+                        .margin_top(20)
+                        .margin_left(10)
+                        .x_label_area_size(30)
+                        .y_label_area_size(30)
+                        .build_cartesian_2d(parameters.x_min..parameters.x_max, parameters.y_min..parameters.y_max)
+                        .unwrap();
+
+                    chart.configure_mesh()
+                        .x_label_style(("sans-serif", 15).into_font().color(&BLACK))
+                        .y_label_style(("sans-serif", 15).into_font().color(&BLACK))
+                        .draw().unwrap();
+
+                    let color = MandelbrotHSL.get_color(0 as f64 / (data.keys().len() as f64));
+
+                    chart.draw_series(
+                        data[key].iter().map(|&(x, y)| {
+                            Circle::new((x, y), 2, MandelbrotHSL.get_color(0. / (data.keys().len() as f64)).filled())
+                        })
+                    ).unwrap()
+                        .label(key)
+                        .legend(move |(x, y)| {
+                            Rectangle::new([(x - 15, y + 1), (x, y)], color)
+                        });
+
+                    for addplot_index in parameters.addplots {
+                        if data.contains_key(&other_keys[addplot_index]) {
+                            let color = MandelbrotHSL.get_color(addplot_index as f64 / (data.keys().len() as f64));
+                            chart.draw_series(
+                                data[&other_keys[addplot_index]].iter().map(|&(x, y)| {
+                                    Circle::new((x, y), 2, color.filled())
+                                })
+                            ).unwrap().label(format!("{}", &other_keys[addplot_index]))
+                                .legend(move |(x, y)| {
+                                    Rectangle::new([(x - 15, y + 1), (x, y)], color)
+                                });
+                        }
+                    }
+                    if parameters.legend {
+                        chart.configure_series_labels()
+                        .position(SeriesLabelPosition::UpperRight)
+                        // .margin(20)
+                        // .legend_area_size(5)
+                        // .border_style(BLUE)
+                        // .background_style(BLUE.mix(0.1))
+                        .draw().unwrap();
+                        // .label_font(("Calibri", 20)).draw().unwrap();
+                    }
+
                 }
             }
         });
