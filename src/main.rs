@@ -84,7 +84,6 @@ impl eframe::App for Monitor {
         }
 
         CentralPanel::default()
-            // .frame(egui::Frame::new().fill(egui::Color32::from_rgb(0,100,180)))
             .show(ctx, |ui| {
             for key in self.keys_for_plots.keys(){
                 plt_window::new(ctx, key, &mut self.data_db, &mut self.plotpara)
@@ -115,7 +114,6 @@ impl eframe::App for Monitor {
 
             });
         TopBottomPanel::bottom("AppInfo")
-            // .frame(egui::Frame::new().fill(egui::Color32::from_rgb(0,100,180)))
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
                     ui.label(format!("Version: {}", env!("CARGO_PKG_VERSION")));
