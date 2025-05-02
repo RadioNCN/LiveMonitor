@@ -3,15 +3,15 @@ mod server;
 mod plt_window;
 mod guide;
 
-use tokio::{self, time};
+use tokio::{self, time, runtime};
 use std::collections::HashMap;
 use tokio::sync::{mpsc};
 use rayon::prelude::*;
 use eframe::egui::{self, SidePanel, CentralPanel, TopBottomPanel, Visuals, Window, Button, DragValue};
 use plotters::prelude::*;
 
-#[tokio::main]
-async fn main() {
+
+fn main() {
     let native_options = eframe::NativeOptions::default();
     eframe::run_native(
         "Monitor",
@@ -23,9 +23,10 @@ async fn main() {
 
 
 struct Monitor {
+    rt: runtime::Runtime,
     data_rx: mpsc::Receiver<(String,(f64,f64))>,
     data_db: HashMap<String,Vec<(f64,f64)>>,
-    data_max_len: usize,
+    data_max_len: usize, time_delay: usize,
     plotpara: HashMap<String,plt_window::Plotpara>,
     keys_for_plots: HashMap<String, bool>,
     enGuide: bool
@@ -42,10 +43,12 @@ impl Monitor {
 
         // Also enable light mode
         context.set_visuals(Visuals::light());
+        let rt = runtime::Builder::new_multi_thread().enable_all().build().unwrap();
         let (tx, mut rx) = mpsc::channel(10000);
-        tokio::spawn(server::ConnectionManager(tx));
+        rt.spawn(server::ConnectionManager(tx));
 
-        Self{data_rx: rx,
+        Self{rt:rt,
+            data_rx: rx,
             data_db: HashMap::new(), keys_for_plots: HashMap::new(),
             data_max_len: 1000,
             plotpara: HashMap::new(),
