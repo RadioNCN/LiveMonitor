@@ -95,7 +95,6 @@ impl eframe::App for Monitor {
                 if ui.add(Button::new("Guide")).clicked(){
                     self.enGuide ^= true;
                 }
-                ui.add(DragValue::new(&mut self.data_max_len).speed(10));
                 if self.enGuide {
                     guide::new(ctx)
                 }
