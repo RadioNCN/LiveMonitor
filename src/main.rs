@@ -9,6 +9,7 @@ use tokio::sync::{mpsc};
 use rayon::prelude::*;
 use eframe::egui::{self, SidePanel, CentralPanel, TopBottomPanel, Visuals, Window, Button, DragValue};
 use plotters::prelude::*;
+use std::time::Instant;
 
 
 fn main() {
@@ -50,7 +51,7 @@ impl Monitor {
         Self{rt:rt,
             data_rx: rx,
             data_db: HashMap::new(), keys_for_plots: HashMap::new(),
-            data_max_len: 1000,
+            data_max_len: 1000, time_delay: 30,
             plotpara: HashMap::new(),
             enGuide: false}
     }
@@ -58,6 +59,9 @@ impl Monitor {
 
 impl eframe::App for Monitor {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let latency = Instant::now();
+        ctx.request_repaint_after(time::Duration::from_millis(self.time_delay as u64));
+
         while self.data_rx.is_empty() == false {
             match self.data_rx.try_recv() {
                 Ok((id, data)) => {
@@ -96,6 +100,8 @@ impl eframe::App for Monitor {
                 if self.enGuide {
                     guide::new(ctx)
                 }
+                ui.add(DragValue::new(&mut self.data_max_len).speed(10));
+                ui.add(DragValue::new(&mut self.time_delay).speed(1));
 
                 for key in self.data_db.keys(){
                     if ui.add(Button::new(key)).clicked(){
@@ -114,10 +120,11 @@ impl eframe::App for Monitor {
                 ui.horizontal(|ui| {
                     ui.label(format!("Version: {}", env!("CARGO_PKG_VERSION")));
                     ui.label(format!("TCP: {}", "127.0.0.1:7800"));
+                    ui.label(format!("Latency: {:?}", latency.elapsed()))
                 })
             });
 
-        ctx.request_repaint_after(time::Duration::from_millis(30));
+
     }
 }
 
