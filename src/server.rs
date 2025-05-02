@@ -49,7 +49,7 @@ pub(crate) async fn ConnectionManager(tx: mpsc::Sender<(String,(f64,f64))>){
                                                 rx_msg.1 = value;
                                                 let mut output_lock = output.lock().await;
                                                 let id =stream_id.clone();
-                                                output_lock.send((id, rx_msg)).await;
+                                                let _ = output_lock.send((id, rx_msg)).await;
 
                                                 drop(output_lock)
                                             }
