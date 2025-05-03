@@ -14,6 +14,7 @@ pub(crate) struct Plotpara {
     pub(crate) addplots: [usize; 4],
     pub(crate) plot_mode: PlotMode
 }
+#[derive(PartialEq)]
 pub(crate) enum PlotMode {
     Scatter, Line
 }
@@ -128,7 +129,6 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
         Window::new(key.to_string()+" | Settings")
             .default_open(true)
             .show(ctx, |ui| {
-                // ui.set_height(ui.available_height());
                 ui.set_width(ui.available_width());
                 if let Some(parameters) =para.get_mut(key) {
                     ui.horizontal(|hui| {
@@ -150,6 +150,12 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
                                 hui.add(DragValue::new(&mut parameters.y_max));
                             })
                         });
+                        ComboBox::from_id_salt("PlotMode")
+                            // .selected_text(&parameters.plot_mode)
+                            .show_ui(hui, |dui| {
+                                dui.selectable_value(&mut parameters.plot_mode, PlotMode::Scatter, "Scatter");
+                                dui.selectable_value(&mut parameters.plot_mode, PlotMode::Line, "Line");
+                            });
                     });
                     ui.horizontal(|vui| {
                         if vui.add(Button::new("Empty data")).clicked() {

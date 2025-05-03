@@ -7,7 +7,7 @@ use tokio::{self, time, runtime};
 use std::collections::HashMap;
 use tokio::sync::{mpsc};
 use rayon::prelude::*;
-use eframe::egui::{self, SidePanel, CentralPanel, TopBottomPanel, Visuals, Window, Button, DragValue};
+use eframe::egui::{self, SidePanel, CentralPanel, TopBottomPanel, Visuals, Window, Button, DragValue, RichText, Color32};
 use plotters::prelude::*;
 use std::time::Instant;
 
@@ -98,7 +98,9 @@ impl eframe::App for Monitor {
                 if self.enGuide {
                     guide::new(ctx)
                 }
+                ui.label(RichText::new("Data Capacity:").color(Color32::from_rgb(0,0,0)));
                 ui.add(DragValue::new(&mut self.data_max_len).speed(10));
+                ui.label(RichText::new("Frame Time:").color(Color32::from_rgb(0,0,0)));
                 ui.add(DragValue::new(&mut self.time_delay).speed(1));
 
                 for key in self.data_db.keys(){
