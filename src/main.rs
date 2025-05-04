@@ -7,7 +7,7 @@ use tokio::{self, time, runtime};
 use std::collections::HashMap;
 use dashmap::DashMap;
 use std::sync::Arc;
-use tokio::sync::{mpsc};
+use tokio::sync::{mpsc, Mutex};
 use rayon::prelude::*;
 use eframe::egui::{self, SidePanel, CentralPanel, TopBottomPanel, Visuals, Window, Button, DragValue, RichText, Color32};
 use plotters::prelude::*;
@@ -27,10 +27,10 @@ fn main() {
 
 struct Monitor {
     rt: runtime::Runtime,
-    data_rx: mpsc::Receiver<(String,(f64,f64))>,
-    data_db: DashMap<String,Vec<(f64,f64)>>,
-    data_max_len: usize, time_delay: usize,
-    plotpara: HashMap<String,plt_window::Plotpara>,
+    data_db: Arc<DashMap<String,Vec<(f64,f64)>>>,
+    data_cap: Arc<Mutex<usize>>, data_cap_old: usize,
+    time_delay: usize,
+    plotpara: Arc<DashMap<String,plt_window::Plotpara>>,
     keys_for_plots: HashMap<String, bool>,
     enGuide: bool
 }
@@ -47,14 +47,19 @@ impl Monitor {
         // Also enable light mode
         context.set_visuals(Visuals::light());
         let rt = runtime::Builder::new_multi_thread().enable_all().build().unwrap();
-        let (tx, mut rx) = mpsc::channel(10000);
-        rt.spawn(server::ConnectionManager(tx));
+        let data_db =Arc::new(DashMap::new());
+        let para_db =Arc::new(DashMap::new());
+        let cap_init = 1000;
+        let data_cap =Arc::new(Mutex::new(cap_init));
+        let db =Arc::clone(&data_db);
+        let para= Arc::clone(&para_db);
+        let cap = Arc::clone(&data_cap);
+        rt.spawn(server::ConnectionManager(db, para, cap));
 
         Self{rt:rt,
-            data_rx: rx,
-            data_db: DashMap::new(), keys_for_plots: HashMap::new(),
-            data_max_len: 1000, time_delay: 30,
-            plotpara: HashMap::new(),
+            data_db: data_db, keys_for_plots: HashMap::new(),
+            data_cap: data_cap, data_cap_old: cap_init, time_delay: 30,
+            plotpara: para_db,
             enGuide: false}
     }
 }
@@ -64,31 +69,10 @@ impl eframe::App for Monitor {
         let latency = Instant::now();
         ctx.request_repaint_after(time::Duration::from_millis(self.time_delay as u64));
 
-        while self.data_rx.is_empty() == false {
-            match self.data_rx.try_recv() {
-                Ok((id, data)) => {
-                    if self.data_db.contains_key(&id){
-                        if let Some(mut x) = self.data_db.get_mut(&id){
-                            x.push(data);
-                            while x.len() > self.data_max_len {
-                                x.remove(0);
-                            }
-                        }
-                    }else{
-                        self.data_db.insert(id.clone(), vec![data]);
-                        self.plotpara.insert(id, plt_window::Plotpara{x_min:0., x_max:0., x_rescale:true,
-                            y_min:0., y_max:0., y_rescale:true, settings: false, legend: false,
-                            addplots: [0,0,0,0], plot_mode: plt_window::PlotMode::Line});
-                    }
-                }
-                Err(e) => {}
-            }
-        }
-
         CentralPanel::default()
             .show(ctx, |ui| {
             for key in self.keys_for_plots.keys(){
-                plt_window::new(ctx, key, &mut self.data_db, &mut self.plotpara)
+                plt_window::new(ctx, key, &self.data_db, &self.plotpara)
             }
         });
         SidePanel::left("Data Channels")
@@ -101,10 +85,17 @@ impl eframe::App for Monitor {
                     guide::new(ctx)
                 }
                 ui.label(RichText::new("Data Capacity:").color(Color32::from_rgb(0,0,0)));
-                ui.add(DragValue::new(&mut self.data_max_len).speed(10));
+                match self.data_cap.try_lock() {
+                    Ok(mut cap_lock) => {
+                        *cap_lock = self.data_cap_old;
+                        ui.add(DragValue::new(&mut *cap_lock).speed(10));
+                        self.data_cap_old = *cap_lock;
+                    }
+                    Err(e) => {ui.add(DragValue::new(&mut self.data_cap_old).speed(10));}
+                }
                 ui.label(RichText::new("Frame Time:").color(Color32::from_rgb(0,0,0)));
                 ui.add(DragValue::new(&mut self.time_delay).speed(1));
-
+                ui.label(RichText::new("Data Channels:").color(Color32::from_rgb(0,0,0)));
                 self.data_db.iter().for_each(|entry| {
                     if ui.add(Button::new(entry.key())).clicked() {
                         if self.keys_for_plots.contains_key(entry.key()) {

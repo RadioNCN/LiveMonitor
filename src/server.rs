@@ -1,20 +1,26 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use dashmap::DashMap;
 use tokio::io::{BufReader, AsyncBufReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{mpsc, Mutex};
 use tokio::runtime::Runtime;
+use crate::plt_window;
 
-pub(crate) async fn ConnectionManager(tx: mpsc::Sender<(String,(f64,f64))>){
+pub(crate) async fn ConnectionManager(db: Arc<DashMap<String,Vec<(f64, f64)>>>,
+                                      para: Arc<DashMap<String,plt_window::Plotpara>>,
+                                      data_cap: Arc<Mutex<usize>>){
     let server_address = "127.0.0.1:7800";
-    let output = Arc::new(Mutex::new(tx));
+
 
     match TcpListener::bind(server_address).await {
         Ok(listener) => {
             loop {
                 match listener.accept().await {
                     Ok((stream, socket)) => {
-                        let output = Arc::clone(&output);
+                        let db = Arc::clone(&db);
+                        let para = Arc::clone(&para);
+                        let cap =Arc::clone(&data_cap);
                         tokio::spawn(async move {
                             let mut reader = BufReader::new(stream);
                             let mut buffer = String::new();
@@ -29,6 +35,10 @@ pub(crate) async fn ConnectionManager(tx: mpsc::Sender<(String,(f64,f64))>){
                                             Ok(value) => {
                                                 println!("received Name: {value}");
                                                 stream_id = value;
+                                                if db.contains_key(&stream_id)==false {
+                                                    let _ = db.insert(stream_id.clone(), vec![]);
+                                                    let _ = para.insert(stream_id.clone(), plt_window::Plotpara::default());
+                                                }
                                             }
                                             Err(e) => {println!("could not parse: {}", e)}
                                         }
@@ -47,11 +57,14 @@ pub(crate) async fn ConnectionManager(tx: mpsc::Sender<(String,(f64,f64))>){
                                         match buffer.trim().parse::<f64>() {
                                             Ok(value) => {
                                                 rx_msg.1 = value;
-                                                let mut output_lock = output.lock().await;
-                                                let id =stream_id.clone();
-                                                let _ = output_lock.send((id, rx_msg)).await;
-
-                                                drop(output_lock)
+                                                if let Some(mut entry) = db.get_mut(&stream_id){
+                                                    entry.push(rx_msg);
+                                                    let cap_lock = cap.lock().await;
+                                                    while entry.len() > *cap_lock {
+                                                        entry.remove(0);
+                                                    }
+                                                    drop(cap_lock);
+                                                }
                                             }
                                             Err(e) => {println!("could not parse: {}", e)}
                                         }
