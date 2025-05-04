@@ -6,7 +6,7 @@ use plotters::prelude::*;
 use std::string::ToString;
 use dashmap::DashMap;
 use strum_macros::Display;
-
+use crate::plt_window;
 
 pub(crate) struct Plotpara {
     pub(crate) settings: bool,
@@ -18,14 +18,23 @@ pub(crate) struct Plotpara {
     pub(crate) addplots: [usize; 4],
     pub(crate) plot_mode: PlotMode
 }
+impl Default for Plotpara {
+    fn default() -> Self {
+        Plotpara {
+        x_min: 0., x_max: 0., x_rescale:true,
+        y_min:0., y_max:0., y_rescale:true,
+        settings: false, legend: false,
+        addplots: [0,0,0,0], plot_mode: plt_window::PlotMode::Line
+    }}
+}
 #[derive(PartialEq, Display, Copy, Clone)]
 pub(crate) enum PlotMode {
     #[strum(serialize = "Scatter")] Scatter,
     #[strum(serialize = "Line")] Line
 }
 pub(crate) fn new(ctx: &egui::Context, key: &String,
-                  data: &mut DashMap<String, Vec<(f64, f64)>>,
-                  para: &mut HashMap<String, Plotpara>) {
+                  data: &DashMap<String, Vec<(f64, f64)>>,
+                  para: &DashMap<String, Plotpara>) {
 
     let (x_min, x_max) = data.get(key).unwrap().iter()
         .fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), &(x, _)|
@@ -41,7 +50,7 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
         }
     });
 
-    if let Some(parameters) = para.get_mut(key){
+    if let Some(mut parameters) = para.get_mut(key){
         if parameters.x_rescale == false {
             parameters.x_min = parameters.x_min.min(x_min);
             parameters.x_max = parameters.x_max.max(x_max);
@@ -63,7 +72,7 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
         .show(ctx, |ui| {
             ui.set_height(ui.available_height());
             ui.set_width(ui.available_width());
-            if let Some(parameters) =para.get_mut(key) {
+            if let Some(mut parameters) =para.get_mut(key) {
                 ui.horizontal(|hui| {
                     if hui.add(Button::new("Settings")).clicked() {
                         parameters.settings ^= true
@@ -167,12 +176,12 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
             }
         });
 
-    if para[key].settings {
+    if para.get(key).unwrap().settings {
         Window::new(key.to_string()+" | Settings")
             .default_open(true)
             .show(ctx, |ui| {
                 ui.set_width(ui.available_width());
-                if let Some(parameters) =para.get_mut(key) {
+                if let Some(mut parameters) =para.get_mut(key) {
                     ui.horizontal(|hui| {
                         hui.vertical(|vui| {
                             vui.checkbox(&mut parameters.x_rescale, "Rescale: X");
