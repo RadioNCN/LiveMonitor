@@ -5,6 +5,8 @@ mod guide;
 
 use tokio::{self, time, runtime};
 use std::collections::HashMap;
+use dashmap::DashMap;
+use std::sync::Arc;
 use tokio::sync::{mpsc};
 use rayon::prelude::*;
 use eframe::egui::{self, SidePanel, CentralPanel, TopBottomPanel, Visuals, Window, Button, DragValue, RichText, Color32};
@@ -26,7 +28,7 @@ fn main() {
 struct Monitor {
     rt: runtime::Runtime,
     data_rx: mpsc::Receiver<(String,(f64,f64))>,
-    data_db: HashMap<String,Vec<(f64,f64)>>,
+    data_db: DashMap<String,Vec<(f64,f64)>>,
     data_max_len: usize, time_delay: usize,
     plotpara: HashMap<String,plt_window::Plotpara>,
     keys_for_plots: HashMap<String, bool>,
@@ -50,7 +52,7 @@ impl Monitor {
 
         Self{rt:rt,
             data_rx: rx,
-            data_db: HashMap::new(), keys_for_plots: HashMap::new(),
+            data_db: DashMap::new(), keys_for_plots: HashMap::new(),
             data_max_len: 1000, time_delay: 30,
             plotpara: HashMap::new(),
             enGuide: false}
@@ -66,7 +68,7 @@ impl eframe::App for Monitor {
             match self.data_rx.try_recv() {
                 Ok((id, data)) => {
                     if self.data_db.contains_key(&id){
-                        if let Some(x) = self.data_db.get_mut(&id){
+                        if let Some(mut x) = self.data_db.get_mut(&id){
                             x.push(data);
                             while x.len() > self.data_max_len {
                                 x.remove(0);
@@ -103,15 +105,15 @@ impl eframe::App for Monitor {
                 ui.label(RichText::new("Frame Time:").color(Color32::from_rgb(0,0,0)));
                 ui.add(DragValue::new(&mut self.time_delay).speed(1));
 
-                for key in self.data_db.keys(){
-                    if ui.add(Button::new(key)).clicked(){
-                        if self.keys_for_plots.contains_key(key){
-                            self.keys_for_plots.remove(key);
-                        }else{
-                            self.keys_for_plots.insert((*key).clone(), true);
+                self.data_db.iter().for_each(|entry| {
+                    if ui.add(Button::new(entry.key())).clicked() {
+                        if self.keys_for_plots.contains_key(entry.key()) {
+                            self.keys_for_plots.remove(entry.key());
+                        } else {
+                            self.keys_for_plots.insert((*entry.key()).clone(), true);
                         }
                     }
-                };
+                });
 
             });
         TopBottomPanel::bottom("AppInfo")

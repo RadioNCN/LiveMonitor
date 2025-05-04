@@ -4,6 +4,7 @@ use eframe::egui::{Button, ComboBox, DragValue, SelectableLabel, Window};
 use egui_plotter::EguiBackend;
 use plotters::prelude::*;
 use std::string::ToString;
+use dashmap::DashMap;
 use strum_macros::Display;
 
 
@@ -23,22 +24,22 @@ pub(crate) enum PlotMode {
     #[strum(serialize = "Line")] Line
 }
 pub(crate) fn new(ctx: &egui::Context, key: &String,
-                  data: &mut HashMap<String, Vec<(f64, f64)>>,
+                  data: &mut DashMap<String, Vec<(f64, f64)>>,
                   para: &mut HashMap<String, Plotpara>) {
 
-    let (x_min, x_max) = data[key].iter()
+    let (x_min, x_max) = data.get(key).unwrap().iter()
         .fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), &(x, _)|
         (min.min(x), max.max(x)));
-    let (y_min, y_max) = data[key].iter()
+    let (y_min, y_max) = data.get(key).unwrap().iter()
         .fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), &(_, y)|
         (min.min(y), max.max(y)));
     let mut other_keys = vec![];
         other_keys.push("Unselected".to_string());
-    for k in data.keys(){
-        if k != key{
-            other_keys.push(k.clone());
+    data.iter().for_each(|entry|{
+        if entry.key() != key{
+            other_keys.push(entry.key().clone());
         }
-    }
+    });
 
     if let Some(parameters) = para.get_mut(key){
         if parameters.x_rescale == false {
@@ -72,7 +73,7 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
                     }
                 });
             }
-            if data[key].len()> 0 {
+            if data.iter().count() > 0 {
                 let root = EguiBackend::new(ui).into_drawing_area();
                 let mut chart = ChartBuilder::on(&root)
                     // .margin(50)
@@ -88,12 +89,12 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
                     .y_label_style(("sans-serif", 15).into_font().color(&BLACK))
                     .draw().unwrap();
 
-                let color = MandelbrotHSL.get_color(0 as f64 / (data.keys().len() as f64));
+                let color = MandelbrotHSL.get_color(0 as f64 / (data.iter().count() as f64));
 
                 match para.get(key).unwrap().plot_mode {
                     PlotMode::Scatter => {
                         chart.draw_series(
-                            data[key].iter().map(|&(x, y)| {
+                            data.get(key).unwrap().iter().map(|&(x, y)| {
                                 Circle::new((x, y), 2, color.filled())
                             })
                         ).unwrap()
@@ -105,7 +106,7 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
                     PlotMode::Line => {
                         chart.draw_series(
                             LineSeries::new(
-                                data[key].iter().map(|&(x, y)| {
+                                data.get(key).unwrap().iter().map(|&(x, y)| {
                                     (x, y)
                                 }),
                                 color.filled())
@@ -122,9 +123,9 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
                         match parameters.plot_mode {
                             PlotMode::Scatter => {
                                 if data.contains_key(&other_keys[addplot_index]) {
-                                    let color = MandelbrotHSL.get_color(addplot_index as f64 / (data.keys().len() as f64));
+                                    let color = MandelbrotHSL.get_color(addplot_index as f64 / (data.iter().count() as f64));
                                     chart.draw_series(
-                                        data[&other_keys[addplot_index]].iter().map(|&(x, y)| {
+                                        data.get(&other_keys[addplot_index]).unwrap().iter().map(|&(x, y)| {
                                             Circle::new((x, y), 2, color.filled())
                                         })
                                     ).unwrap().label(format!("{}", &other_keys[addplot_index]))
@@ -135,10 +136,10 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
                             }
                             PlotMode::Line => {
                                 if data.contains_key(&other_keys[addplot_index]) {
-                                    let color = MandelbrotHSL.get_color(addplot_index as f64 / (data.keys().len() as f64));
+                                    let color = MandelbrotHSL.get_color(addplot_index as f64 / (data.iter().count() as f64));
                                     chart.draw_series(
                                         LineSeries::new(
-                                            data[&other_keys[addplot_index]].iter().map(|&(x, y)| {
+                                            data.get(&other_keys[addplot_index]).unwrap().iter().map(|&(x, y)| {
                                                 (x, y)
                                             }),
                                             color
@@ -199,7 +200,7 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
                     });
                     ui.horizontal(|vui| {
                         if vui.add(Button::new("Empty data")).clicked() {
-                            if let Some(val) = data.get_mut(key) {
+                            if let Some(mut val) = data.get_mut(key) {
                                 val.clear()
                             }
                         }
