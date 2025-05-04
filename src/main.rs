@@ -76,7 +76,7 @@ impl eframe::App for Monitor {
                         self.data_db.insert(id.clone(), vec![data]);
                         self.plotpara.insert(id, plt_window::Plotpara{x_min:0., x_max:0., x_rescale:true,
                             y_min:0., y_max:0., y_rescale:true, settings: false, legend: false,
-                            addplots: [0,0,0,0], plot_mode: plt_window::PlotMode::Scatter});
+                            addplots: [0,0,0,0], plot_mode: plt_window::PlotMode::Line});
                     }
                 }
                 Err(e) => {}

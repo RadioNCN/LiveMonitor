@@ -10,6 +10,8 @@ egui-plotter = "0.4.0"
 plotters = "0.3.0"
 rayon = "1.10.0"
 dashmap = "7.0.0-rc1"
+strum = "0.27"
+strum_macros = "0.27"
 
 [profile.release]
 opt-level = 3  # Maximum optimization level
