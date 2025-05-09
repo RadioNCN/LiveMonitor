@@ -1,6 +1,6 @@
 // #![windows_subsystem = "windows"]
 mod server;
-mod plt_window;
+mod pltGraph;
 mod guide;
 
 use tokio::{self, time, runtime};
@@ -30,7 +30,7 @@ struct Monitor {
     data_db: Arc<DashMap<String,Vec<(f64,f64)>>>,
     data_cap: Arc<Mutex<usize>>, data_cap_old: usize,
     time_delay: usize,
-    plotpara: Arc<DashMap<String,plt_window::Plotpara>>,
+    plotpara: Arc<DashMap<String, pltGraph::Plotpara>>,
     keys_for_plots: HashMap<String, bool>,
     enGuide: bool
 }
@@ -54,7 +54,7 @@ impl Monitor {
         let db =Arc::clone(&data_db);
         let para= Arc::clone(&para_db);
         let cap = Arc::clone(&data_cap);
-        rt.spawn(server::ConnectionManager(db, para, cap));
+        rt.spawn(server::GraphServer(db, para, cap));
 
         Self{rt:rt,
             data_db: data_db, keys_for_plots: HashMap::new(),
@@ -72,7 +72,7 @@ impl eframe::App for Monitor {
         CentralPanel::default()
             .show(ctx, |ui| {
             for key in self.keys_for_plots.keys(){
-                plt_window::new(ctx, key, &self.data_db, &self.plotpara)
+                pltGraph::new(ctx, key, &self.data_db, &self.plotpara)
             }
         });
         SidePanel::left("Data Channels")
