@@ -1,6 +1,7 @@
-// #![windows_subsystem = "windows"]
+#![windows_subsystem = "windows"]
 mod server;
 mod pltGraph;
+mod pltHeatmap;
 mod guide;
 
 use tokio::{self, time, runtime};
@@ -30,7 +31,8 @@ struct Monitor {
     data_db: Arc<DashMap<String,Vec<(f64,f64)>>>,
     data_cap: Arc<Mutex<usize>>, data_cap_old: usize,
     time_delay: usize,
-    plotpara: Arc<DashMap<String, pltGraph::Plotpara>>,
+    graphpara: Arc<DashMap<String, pltGraph::Plotpara>>,
+    heatmpara: Arc<DashMap<String, pltHeatmap::Plotpara>>,
     keys_for_plots: HashMap<String, bool>,
     enGuide: bool
 }
@@ -48,18 +50,24 @@ impl Monitor {
         context.set_visuals(Visuals::light());
         let rt = runtime::Builder::new_multi_thread().enable_all().build().unwrap();
         let data_db =Arc::new(DashMap::new());
-        let para_db =Arc::new(DashMap::new());
+        let g_para_db =Arc::new(DashMap::new());
+        let h_para_db =Arc::new(DashMap::new());
         let cap_init = 1000;
         let data_cap =Arc::new(Mutex::new(cap_init));
+
         let db =Arc::clone(&data_db);
-        let para= Arc::clone(&para_db);
+        let para= Arc::clone(&g_para_db);
         let cap = Arc::clone(&data_cap);
         rt.spawn(server::GraphServer(db, para, cap));
+
+        let db =Arc::clone(&data_db);
+        let para= Arc::clone(&h_para_db);
+        rt.spawn(server::HeatmapServer(db, para));
 
         Self{rt:rt,
             data_db: data_db, keys_for_plots: HashMap::new(),
             data_cap: data_cap, data_cap_old: cap_init, time_delay: 30,
-            plotpara: para_db,
+            graphpara: g_para_db, heatmpara: h_para_db,
             enGuide: false}
     }
 }
@@ -72,7 +80,12 @@ impl eframe::App for Monitor {
         CentralPanel::default()
             .show(ctx, |ui| {
             for key in self.keys_for_plots.keys(){
-                pltGraph::new(ctx, key, &self.data_db, &self.plotpara)
+                if self.graphpara.contains_key(key){
+                    pltGraph::new(ctx, key, &self.data_db, &self.graphpara)
+                }
+                if self.heatmpara.contains_key(key){
+                    pltHeatmap::new(ctx, key, &self.data_db, &self.heatmpara)
+                }
             }
         });
         SidePanel::left("Data Channels")
