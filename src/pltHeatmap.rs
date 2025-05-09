@@ -77,16 +77,16 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
         .show(ctx, |ui| {
             ui.set_height(ui.available_height());
             ui.set_width(ui.available_width());
-            if let Some(mut parameters) =para.get_mut(key) {
-                ui.horizontal(|hui| {
-                    if hui.add(Button::new("Settings")).clicked() {
-                        parameters.settings ^= true
-                    }
-                    if hui.add(Button::new("Legend")).clicked() {
-                        parameters.legend ^= true
-                    }
-                });
-            }
+            // if let Some(mut parameters) =para.get_mut(key) {
+            //     ui.horizontal(|hui| {
+            //         if hui.add(Button::new("Settings")).clicked() {
+            //             parameters.settings ^= true
+            //         }
+            //         if hui.add(Button::new("Legend")).clicked() {
+            //             parameters.legend ^= true
+            //         }
+            //     });
+            // }
 
             let root = EguiBackend::new(ui).into_drawing_area();
             let mut chart = ChartBuilder::on(&root)
