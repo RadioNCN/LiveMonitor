@@ -93,7 +93,7 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
                 // .margin(50)
                 .margin_top(20)
                 .margin_left(10)
-                .margin_right(10)
+                .margin_right(20)
                 .x_label_area_size(30)
                 .y_label_area_size(30)
                 .build_cartesian_2d(0usize..5usize, 0usize..10usize)
@@ -104,9 +104,9 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
             let mut matrix: Vec<Vec<f64>> = vec![vec![]];
             if let Some(value) = data.get(key) {
                 let mut k =0;
-                for i in 0..n-1 {
+                for i in 0..n {
                     let mut row:Vec<f64> =vec![];
-                    for j in 0..m-1{
+                    for j in 0..m{
                         row.push(value[k].0);
                         k+=1;
                     }
