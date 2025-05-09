@@ -24,11 +24,11 @@ impl Default for Plotpara {
         x_min: 0., x_max: 0., x_rescale:true,
         y_min:0., y_max:0., y_rescale:true,
         settings: false, legend: false,
-        addplots: [0,0,0,0], plot_mode: pltGraph::PlotMode::Line
+        addplots: [0,0,0,0], plot_mode: PlotMode::Line
     }}
 }
 #[derive(PartialEq, Display, Copy, Clone)]
-pub(crate) enum PlotMode {
+pub(crate) enum PlotMode{
     #[strum(serialize = "Scatter")] Scatter,
     #[strum(serialize = "Line")] Line
 }
@@ -76,112 +76,55 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
         .show(ctx, |ui| {
             ui.set_height(ui.available_height());
             ui.set_width(ui.available_width());
-            if let Some(mut parameters) =para.get_mut(key) {
-                ui.horizontal(|hui| {
-                    if hui.add(Button::new("Settings")).clicked() {
-                        parameters.settings ^= true
-                    }
-                    if hui.add(Button::new("Legend")).clicked() {
-                        parameters.legend ^= true
-                    }
-                });
-            }
+            // if let Some(mut parameters) =para.get_mut(key) {
+            //     ui.horizontal(|hui| {
+            //         if hui.add(Button::new("Settings")).clicked() {
+            //             parameters.settings ^= true
+            //         }
+            //         if hui.add(Button::new("Legend")).clicked() {
+            //             parameters.legend ^= true
+            //         }
+            //     });
+            // }
 
             let root = EguiBackend::new(ui).into_drawing_area();
             let mut chart = ChartBuilder::on(&root)
                 // .margin(50)
                 .margin_top(20)
-                .margin_left(20)
-                .margin_right(10)
+                .margin_left(10)
+                .margin_right(20)
                 .x_label_area_size(30)
                 .y_label_area_size(30)
-                .build_cartesian_2d(para.get(key).unwrap().x_min..para.get(key).unwrap().x_max, para.get(key).unwrap().y_min..para.get(key).unwrap().y_max)
+                .build_cartesian_2d(0usize..5usize, 0usize..10usize)
                 .unwrap();
 
-            chart.configure_mesh()
-                .x_label_style(("sans-serif", 15).into_font().color(&BLACK))
-                .y_label_style(("sans-serif", 15).into_font().color(&BLACK))
-                .draw().unwrap();
-
-            let color = MandelbrotHSL.get_color(0 as f64 / (data.iter().count() as f64));
-
-            match para.get(key).unwrap().plot_mode {
-                PlotMode::Scatter => {
-                    if let Some(val) = data.get(key){
-                        chart.draw_series(
-                            val.iter().map(|&(x, y)| {
-                                Circle::new((x, y), 2, color.filled())
-                            })
-                        ).unwrap()
-                            .label(key)
-                            .legend(move |(x, y)| {
-                                Rectangle::new([(x - 15, y + 1), (x, y)], color)
-                            });
+            let n =10;
+            let m =5;
+            let mut matrix: Vec<Vec<f64>> = vec![vec![]];
+            if let Some(value) = data.get(key) {
+                let mut k =0;
+                for i in 0..n {
+                    let mut row:Vec<f64> =vec![];
+                    for j in 0..m{
+                        row.push(value[k].0);
+                        k+=1;
                     }
+                    matrix.push(row);
                 }
-                PlotMode::Line => {
-                    if let Some(val) = data.get(key){
-                        chart.draw_series(
-                            LineSeries::new(
-                                val.iter().map(|&(x, y)| {
-                                    (x, y)
-                                }),
-                                color.filled())
-                        ).unwrap()
-                            .label(key)
-                            .legend(move |(x, y)| {
-                                Rectangle::new([(x - 15, y + 1), (x, y)], color)
-                            });
-                    }
-                }
-            }
+                let len =value.value().len()as f64;
+                chart.draw_series(
+                    matrix.iter().enumerate().flat_map(|(y, row)| {
+                        row.iter().enumerate().map(move |(x, val)| {
+                            let color = MandelbrotHSL.get_color(val / len);
+                            Rectangle::new(
+                                [(x, y), (x + 1, y + 1)],
+                                color.filled(),
+                            )
 
-            for addplot_index in para.get(key).unwrap().addplots {
-                if let Some(parameters) = para.get(&other_keys[addplot_index]) {
-                    match parameters.plot_mode {
-                        PlotMode::Scatter => {
-                            if let Some(val) = data.get(&other_keys[addplot_index]) {
-                                if data.contains_key(&other_keys[addplot_index]) {
-                                    let color = MandelbrotHSL.get_color(addplot_index as f64 / (data.iter().count() as f64));
-                                    chart.draw_series(
-                                        val.iter().map(|&(x, y)| {
-                                            Circle::new((x, y), 2, color.filled())
-                                        })
-                                    ).unwrap().label(format!("{}", &other_keys[addplot_index]))
-                                        .legend(move |(x, y)| {
-                                            Rectangle::new([(x - 15, y + 1), (x, y)], color)
-                                        });
-                                }
-                            }
-                        }
-                        PlotMode::Line => {
-                            if let Some(val) = data.get(&other_keys[addplot_index]) {
-                                if data.contains_key(&other_keys[addplot_index]) {
-                                    let color = MandelbrotHSL.get_color(addplot_index as f64 / (data.iter().count() as f64));
-                                    chart.draw_series(
-                                        LineSeries::new(
-                                            val.iter().map(|&(x, y)| {
-                                                (x, y)
-                                            }),
-                                            color
-                                        )
-                                    ).unwrap().label(format!("{}", &other_keys[addplot_index]))
-                                        .legend(move |(x, y)| {
-                                            Rectangle::new([(x - 15, y + 1), (x, y)], color)
-                                        });
-                                }
-                            }
-                        }
-                    }
-                }
+                        })
+                    }),
+                ).unwrap();
             }
-            if para.get(key).unwrap().legend {
-                chart.configure_series_labels()
-                    .position(SeriesLabelPosition::UpperRight)
-                    .draw().unwrap();
-
-            }
-
         });
 
     if para.get(key).unwrap().settings {
