@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["PlotMode"],"fn":["new"],"struct":["Plotpara"]};
