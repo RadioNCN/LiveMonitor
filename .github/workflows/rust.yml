@@ -30,27 +30,12 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
       
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    - name: Setup Rust
-      uses: dtolnay/rust-toolchain@stable
-    - name: Configure cache
-      uses: Swatinem/rust-cache@v2
-    - name: Setup pages
-      id: pages
-      uses: actions/configure-pages@v5
-    - name: Clean docs folder
-      run: cargo clean --doc
-    - name: Build docs
-      run: cargo doc --no-deps
-    #- name: Add redirect
-     # run: echo '<meta http-equiv="refresh" content="0;url=index.html">' > target/doc/index.html
-    - name: Remove lock file
-      run: rm target/doc/.lock
+    - run: cargo rustdoc
     - name: Upload artifact
-      uses: actions/upload-pages-artifact@v3
+      uses: actions/upload-pages-artifact@v2
       with:
-        path: target/doc
+       path: "target/doc"
+       
   deploy:
     name: Deploy
     environment:
