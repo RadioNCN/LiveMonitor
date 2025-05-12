@@ -27,13 +27,23 @@ fn main() {
 
 
 struct Monitor {
+    /// tokio runtime
     rt: runtime::Runtime,
+    /// database for the actual data
     data_db: Arc<DashMap<String,Vec<(f64,f64)>>>,
-    data_cap: Arc<Mutex<usize>>, data_cap_old: usize,
+    /// capacity of data points in the database per channel
+    data_cap: Arc<Mutex<usize>>,
+    /// for if no lock on data_cap can be acquired
+    data_cap_old: usize,
+    /// maximum time until a repaint of the gui is requested
     time_delay: usize,
+    /// parameter database for graph like plots
     graphpara: Arc<DashMap<String, pltGraph::Plotpara>>,
+    /// parameter database for the heatmap plots
     heatmpara: Arc<DashMap<String, pltHeatmap::Plotpara>>,
+    /// list of data channels stored in database
     keys_for_plots: HashMap<String, bool>,
+    /// is the guide enabled?
     enGuide: bool
 }
 
