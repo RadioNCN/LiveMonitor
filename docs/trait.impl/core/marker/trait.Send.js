@@ -1,9 +1,0 @@
-(function() {
-    var implementors = Object.fromEntries([["LiveMonitor",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.86.0/core/marker/trait.Send.html\" title=\"trait core::marker::Send\">Send</a> for <a class=\"enum\" href=\"LiveMonitor/pltGraph/enum.PlotMode.html\" title=\"enum LiveMonitor::pltGraph::PlotMode\">PlotMode</a>",1,["LiveMonitor::pltGraph::PlotMode"]],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.86.0/core/marker/trait.Send.html\" title=\"trait core::marker::Send\">Send</a> for <a class=\"enum\" href=\"LiveMonitor/pltHeatmap/enum.PlotMode.html\" title=\"enum LiveMonitor::pltHeatmap::PlotMode\">PlotMode</a>",1,["LiveMonitor::pltHeatmap::PlotMode"]],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.86.0/core/marker/trait.Send.html\" title=\"trait core::marker::Send\">Send</a> for <a class=\"struct\" href=\"LiveMonitor/pltGraph/struct.Plotpara.html\" title=\"struct LiveMonitor::pltGraph::Plotpara\">Plotpara</a>",1,["LiveMonitor::pltGraph::Plotpara"]],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.86.0/core/marker/trait.Send.html\" title=\"trait core::marker::Send\">Send</a> for <a class=\"struct\" href=\"LiveMonitor/pltHeatmap/struct.Plotpara.html\" title=\"struct LiveMonitor::pltHeatmap::Plotpara\">Plotpara</a>",1,["LiveMonitor::pltHeatmap::Plotpara"]],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.86.0/core/marker/trait.Send.html\" title=\"trait core::marker::Send\">Send</a> for <a class=\"struct\" href=\"LiveMonitor/struct.Monitor.html\" title=\"struct LiveMonitor::Monitor\">Monitor</a>",1,["LiveMonitor::Monitor"]]]]]);
-    if (window.register_implementors) {
-        window.register_implementors(implementors);
-    } else {
-        window.pending_implementors = implementors;
-    }
-})()
-//{"start":57,"fragment_lengths":[1569]}
