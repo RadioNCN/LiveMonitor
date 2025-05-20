@@ -57,7 +57,7 @@ impl Monitor {
         });
 
         // Also enable light mode
-        context.set_visuals(Visuals::light());
+        // context.set_visuals(Visuals::light());
         let rt = runtime::Builder::new_multi_thread().enable_all().build().unwrap();
         let data_db =Arc::new(DashMap::new());
         let g_para_db =Arc::new(DashMap::new());
@@ -98,8 +98,13 @@ impl eframe::App for Monitor {
                 }
             }
         });
+        let mut zbt_blue = Color32::from_rgb(0,100,180);
+        if ctx.theme() == egui::Theme::Dark{
+            zbt_blue = Color32::from_rgb(0,10,18);
+        }
         SidePanel::left("Data Channels")
-            .frame(egui::Frame::new().fill(egui::Color32::from_rgb(0,100,180)))
+
+            .frame(egui::Frame::new().fill(zbt_blue))
             .show(ctx, |ui| {
                 if ui.add(Button::new("Guide")).clicked(){
                     self.enGuide ^= true;
@@ -107,7 +112,7 @@ impl eframe::App for Monitor {
                 if self.enGuide {
                     guide::new(ctx)
                 }
-                ui.label(RichText::new("Data Capacity:").color(Color32::from_rgb(0,0,0)));
+                ui.label(RichText::new("Data Capacity:"));
                 match self.data_cap.try_lock() {
                     Ok(mut cap_lock) => {
                         *cap_lock = self.data_cap_old;
@@ -116,9 +121,9 @@ impl eframe::App for Monitor {
                     }
                     Err(e) => {ui.add(DragValue::new(&mut self.data_cap_old).speed(10));}
                 }
-                ui.label(RichText::new("Frame Time:").color(Color32::from_rgb(0,0,0)));
+                ui.label(RichText::new("Frame Time:"));
                 ui.add(DragValue::new(&mut self.time_delay).speed(1));
-                ui.label(RichText::new("Data Channels:").color(Color32::from_rgb(0,0,0)));
+                ui.label(RichText::new("Data Channels:"));
                 self.data_db.iter().for_each(|entry| {
                     if ui.add(Button::new(entry.key())).clicked() {
                         if self.keys_for_plots.contains_key(entry.key()) {

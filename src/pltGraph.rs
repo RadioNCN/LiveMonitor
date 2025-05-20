@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 use eframe::egui;
-use eframe::egui::{Button, ComboBox, DragValue, SelectableLabel, Window};
+use eframe::egui::{Button, ComboBox, DragValue, SelectableLabel, style, Window};
 use egui_plotter::EguiBackend;
 use plotters::prelude::*;
 use std::string::ToString;
 use dashmap::DashMap;
+use plotters::prelude::full_palette::GREY;
 use strum_macros::Display;
 use crate::pltGraph;
 
@@ -98,10 +99,26 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
                 .build_cartesian_2d(para.get(key).unwrap().x_min..para.get(key).unwrap().x_max, para.get(key).unwrap().y_min..para.get(key).unwrap().y_max)
                 .unwrap();
 
-            chart.configure_mesh()
-                .x_label_style(("sans-serif", 15).into_font().color(&BLACK))
-                .y_label_style(("sans-serif", 15).into_font().color(&BLACK))
-                .draw().unwrap();
+
+
+            if ctx.theme() == egui::Theme::Dark{
+                chart.configure_mesh()
+                    // .grid_style(GREY)
+                    .x_label_style(("sans-serif", 15).into_font().color(&GREY))
+                    .y_label_style(("sans-serif", 15).into_font().color(&GREY))
+                    .bold_line_style(&GREY)
+                    .light_line_style(&BLACK)
+                    .axis_style(&GREY)
+                    .draw().unwrap();
+            }else{
+                chart.configure_mesh()
+                    .x_label_style(("sans-serif", 15).into_font().color(&BLACK))
+                    .y_label_style(("sans-serif", 15).into_font().color(&BLACK))
+                    .bold_line_style(&BLACK)
+                    .light_line_style(&BLACK)
+                    .axis_style(&BLACK)
+                    .draw().unwrap();
+            }
 
             let color = MandelbrotHSL.get_color(0 as f64 / (data.iter().count() as f64));
 
