@@ -11,20 +11,14 @@ use crate::pltGraph;
 pub(crate) struct Plotpara {
     pub(crate) settings: bool,
     pub(crate) legend: bool,
-    pub(crate) x_min:f64, pub(crate) x_max:f64,
-    pub(crate) x_rescale: bool,
-    pub(crate) y_min:f64, pub(crate) y_max:f64,
-    pub(crate) y_rescale: bool,
-    pub(crate) addplots: [usize; 4],
-    pub(crate) plot_mode: PlotMode
+    pub(crate) x_num:i32,
+    pub(crate) y_num:i32,
 }
 impl Default for Plotpara {
     fn default() -> Self {
         Plotpara {
-        x_min: 0., x_max: 0., x_rescale:true,
-        y_min:0., y_max:0., y_rescale:true,
+        x_num: 5, y_num: 10,
         settings: false, legend: false,
-        addplots: [0,0,0,0], plot_mode: PlotMode::Line
     }}
 }
 #[derive(PartialEq, Display, Copy, Clone)]
@@ -35,33 +29,6 @@ pub(crate) enum PlotMode{
 pub(crate) fn new(ctx: &egui::Context, key: &String,
                   data: &DashMap<String, Vec<(f64, f64)>>,
                   para: &DashMap<String, Plotpara>) {
-    if data.get(key).unwrap().len()>0 {
-        let (x_min, x_max) = data.get(key).unwrap().iter()
-            .fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), &(x, _)|
-            (min.min(x), max.max(x)));
-        let (y_min, y_max) = data.get(key).unwrap().iter()
-            .fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), &(_, y)|
-            (min.min(y), max.max(y)));
-
-
-
-        if let Some(mut parameters) = para.get_mut(key) {
-            if parameters.x_rescale == false {
-                parameters.x_min = parameters.x_min.min(x_min);
-                parameters.x_max = parameters.x_max.max(x_max);
-            } else {
-                parameters.x_min = x_min;
-                parameters.x_max = x_max;
-            }
-            if parameters.y_rescale == false {
-                parameters.y_min = parameters.y_min.min(y_min);
-                parameters.y_max = parameters.y_max.max(y_max);
-            } else {
-                parameters.y_min = y_min;
-                parameters.y_max = y_max;
-            }
-        }
-    }
     let mut other_keys = vec![];
     other_keys.push("Unselected".to_string());
     data.iter().for_each(|entry| {
@@ -76,16 +43,16 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
         .show(ctx, |ui| {
             ui.set_height(ui.available_height());
             ui.set_width(ui.available_width());
-            // if let Some(mut parameters) =para.get_mut(key) {
-            //     ui.horizontal(|hui| {
-            //         if hui.add(Button::new("Settings")).clicked() {
-            //             parameters.settings ^= true
-            //         }
-            //         if hui.add(Button::new("Legend")).clicked() {
-            //             parameters.legend ^= true
-            //         }
-            //     });
-            // }
+            if let Some(mut parameters) =para.get_mut(key) {
+                ui.horizontal(|hui| {
+                    if hui.add(Button::new("Settings")).clicked() {
+                        parameters.settings ^= true
+                    }
+                    // if hui.add(Button::new("Legend")).clicked() {
+                    //     parameters.legend ^= true
+                    // }
+                });
+            }
 
             let root = EguiBackend::new(ui).into_drawing_area();
             let mut chart = ChartBuilder::on(&root)
@@ -97,33 +64,30 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
                 .y_label_area_size(30)
                 .build_cartesian_2d(0usize..5usize, 0usize..10usize)
                 .unwrap();
-
-            let n =10;
-            let m =5;
-            let mut matrix: Vec<Vec<f64>> = vec![vec![]];
-            if let Some(value) = data.get(key) {
-                let mut k =0;
-                for i in 0..n {
-                    let mut row:Vec<f64> =vec![];
-                    for j in 0..m{
-                        row.push(value[k].0);
-                        k+=1;
+            if let Some(parameters) =para.get(key) {
+                let mut matrix: Vec<Vec<f64>> = vec![vec![]];
+                if let Some(value) = data.get(key) {
+                    let mut k = 0;
+                    for i in 0..parameters.y_num {
+                        let mut row: Vec<f64> = vec![];
+                        for j in 0..parameters.x_num {
+                            row.push(value[k].0);
+                            k += 1;
+                        }
+                        matrix.push(row);
                     }
-                    matrix.push(row);
+                    chart.draw_series(
+                        matrix.iter().enumerate().flat_map(|(y, row)| {
+                            row.iter().enumerate().map(move |(x, val)| {
+                                let color = MandelbrotHSL.get_color(*val);
+                                Rectangle::new(
+                                    [(x, y), (x + 1, y + 1)],
+                                    color.filled(),
+                                )
+                            })
+                        }),
+                    ).unwrap();
                 }
-                let len =value.value().len()as f64;
-                chart.draw_series(
-                    matrix.iter().enumerate().flat_map(|(y, row)| {
-                        row.iter().enumerate().map(move |(x, val)| {
-                            let color = MandelbrotHSL.get_color(val / len);
-                            Rectangle::new(
-                                [(x, y), (x + 1, y + 1)],
-                                color.filled(),
-                            )
-
-                        })
-                    }),
-                ).unwrap();
             }
         });
 
@@ -132,32 +96,23 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
             .default_open(true)
             .show(ctx, |ui| {
                 ui.set_width(ui.available_width());
+                let data_len_f64 =data.get(key).unwrap().len()as f64;
                 if let Some(mut parameters) =para.get_mut(key) {
                     ui.horizontal(|hui| {
                         hui.vertical(|vui| {
-                            vui.checkbox(&mut parameters.x_rescale, "Rescale: X");
                             vui.horizontal(|hui| {
-                                hui.label("X min:");
-                                hui.add(DragValue::new(&mut parameters.x_min));
-                                hui.label("X max:");
-                                hui.add(DragValue::new(&mut parameters.x_max));
+                                hui.label("X:");
+                                let y = parameters.y_num as f64;
+                                hui.add(DragValue::new(&mut parameters.x_num).range(0..=(data_len_f64/y)as usize));
                             })
                         });
                         hui.vertical(|vui| {
-                            vui.checkbox(&mut parameters.y_rescale, "Rescale: Y");
                             vui.horizontal(|hui| {
-                                hui.label("Y min:");
-                                hui.add(DragValue::new(&mut parameters.y_min));
-                                hui.label("Y max:");
-                                hui.add(DragValue::new(&mut parameters.y_max));
+                                hui.label("Y:");
+                                let x = parameters.x_num as f64;
+                                hui.add(DragValue::new(&mut parameters.y_num).range(0..=(data_len_f64/x)as usize));
                             })
                         });
-                        ComboBox::from_id_salt("PlotMode")
-                            .selected_text(format!("{}", &parameters.plot_mode))
-                            .show_ui(hui, |dui| {
-                                dui.selectable_value(&mut parameters.plot_mode, PlotMode::Scatter, "Scatter");
-                                dui.selectable_value(&mut parameters.plot_mode, PlotMode::Line, "Line");
-                            });
                     });
                     ui.horizontal(|vui| {
                         if vui.add(Button::new("Empty data")).clicked() {
@@ -165,42 +120,6 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
                                 val.clear()
                             }
                         }
-                        ComboBox::from_id_salt("Graph 1")
-                            .selected_text(&other_keys[parameters.addplots[0]])
-                            .show_ui(vui, |dui| {
-                                for (index, k) in other_keys.iter().enumerate(){
-                                    if dui.selectable_label(parameters.addplots[0]==index, k).clicked(){
-                                        parameters.addplots[0]= index;
-                                    }
-                                }
-                            });
-                        ComboBox::from_id_salt("Graph 2")
-                            .selected_text(&other_keys[parameters.addplots[1]])
-                            .show_ui(vui, |dui| {
-                                for (index, k) in other_keys.iter().enumerate(){
-                                    if dui.selectable_label(parameters.addplots[1]==index, k).clicked(){
-                                        parameters.addplots[1]= index;
-                                    }
-                                }
-                            });
-                        ComboBox::from_id_salt("Graph 3")
-                            .selected_text(&other_keys[parameters.addplots[2]])
-                            .show_ui(vui, |dui| {
-                                for (index, k) in other_keys.iter().enumerate(){
-                                    if dui.selectable_label(parameters.addplots[2]==index, k).clicked(){
-                                        parameters.addplots[2]= index;
-                                    }
-                                }
-                            });
-                        ComboBox::from_id_salt("Graph 4")
-                            .selected_text(&other_keys[parameters.addplots[3]])
-                            .show_ui(vui, |dui| {
-                                for (index, k) in other_keys.iter().enumerate(){
-                                    if dui.selectable_label(parameters.addplots[3]==index, k).clicked(){
-                                        parameters.addplots[3]= index;
-                                    }
-                                }
-                            });
                     });
                     if ui.add(Button::new("Exit Settings")).clicked() {
                         parameters.settings = false
