@@ -101,7 +101,7 @@ pub(crate) async fn HeatmapServer(db: Arc<DashMap<String,Vec<(f64, f64)>>>,
                             let mut msg2read = 0i8;
                             let mut rx_msg = vec![];
                             let mut stream_id = "temp".to_string();
-                            let len =50;
+                            let mut len =50;
                             let mut i=0;
                             while let Ok(bytes_read) = reader.read_line(&mut buffer).await {
                                 if bytes_read == 0 {
@@ -124,17 +124,27 @@ pub(crate) async fn HeatmapServer(db: Arc<DashMap<String,Vec<(f64, f64)>>>,
                                         msg2read = 1;
                                     }
                                     1 => {
+                                        match buffer.trim().parse::<i64>() {
+                                            Ok(value) => {
+                                                println!("received Len: {value}");
+                                                len = value;
+                                            }
+                                            Err(e) => { println!("could not parse: {}", e) }
+                                        }
+                                        msg2read = 2;
+                                    }
+                                    2 => {
                                         match buffer.trim().parse::<f64>() {
                                             Ok(value) => {
-                                                println!("{value}");
+                                                // println!("{value}");
                                                 rx_msg.push((value, i as f64));
                                             }
                                             Err(e) => { println!("could not parse: {}", e) }
                                         }
                                         i+=1;
-                                        if i ==len -1 {msg2read = 2};
+                                        if i ==(len) -1 {msg2read = 3};
                                     }
-                                    2 => {
+                                    3 => {
                                         match buffer.trim().parse::<f64>() {
                                             Ok(value) => {
                                                 rx_msg.push((value, i as f64));
@@ -142,11 +152,12 @@ pub(crate) async fn HeatmapServer(db: Arc<DashMap<String,Vec<(f64, f64)>>>,
                                                 if let Some(mut entry) = db.get_mut(&stream_id) {
                                                     entry.clear();
                                                     entry.append(&mut rx_msg);
+                                                    rx_msg.clear()
                                                 }
                                             }
                                             Err(e) => { println!("could not parse: {}", e) }
                                         }
-                                        msg2read = 1;
+                                        msg2read = 2;
                                     }
                                     _ => {}
                                 }

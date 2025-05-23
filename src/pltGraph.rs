@@ -115,7 +115,7 @@ pub(crate) fn new(ctx: &egui::Context, key: &String,
                     .x_label_style(("sans-serif", 15).into_font().color(&BLACK))
                     .y_label_style(("sans-serif", 15).into_font().color(&BLACK))
                     .bold_line_style(&BLACK)
-                    .light_line_style(&BLACK)
+                    .light_line_style(&WHITE)
                     .axis_style(&BLACK)
                     .draw().unwrap();
             }
